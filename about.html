@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#03070c">
+  <meta name="description" content="About Astronomy Aces, associated with the Physics Department at Thakur College of Science and Commerce.">
+  <title>About Astronomy Aces</title>
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <canvas class="cosmic-field" data-cosmic-field aria-hidden="true"></canvas>
+  <div class="site-noise" aria-hidden="true"></div>
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="wordmark" href="index.html" aria-label="Astronomy Aces home"><span class="wordmark-dot"></span>Astronomy Aces</a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="index.html">Intro</a>
+        <a href="astro_finaldraft.html">Simulation</a>
+        <a href="about.html" aria-current="page">About</a>
+        <a href="#instagram" data-instagram-link>Instagram</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero page-hero about-hero" aria-labelledby="about-title">
+        <div class="logo-stage about-logo" data-reveal><img class="club-logo" src="assets/astronomy-aces-logo.png" alt="Astronomy Aces official logo"></div>
+        <div data-reveal>
+          <h1 id="about-title" class="page-title"><small>About the club</small>Astronomy Aces</h1>
+          <p class="about-intro">A platform for students who are drawn to astronomy, astrophysics, space science, observation, scientific discussion, experimentation, and exploration.</p>
+          <div class="identity-strip"><span>Physics Department</span><span>Thakur College of Science and Commerce</span></div>
+        </div>
+      </section>
+
+      <section class="content-section" aria-labelledby="club-purpose">
+        <div class="about-grid">
+          <div data-reveal>
+            <p class="section-label">The club</p>
+            <h2 id="club-purpose" class="page-title" style="font-size:clamp(2.7rem,5vw,5rem);">Learning through the universe.</h2>
+          </div>
+          <div class="about-copy" data-reveal>
+            <p>Astronomy Aces is associated with the Physics Department at Thakur College of Science and Commerce. The club creates room for students to approach the universe through scientific curiosity and shared inquiry.</p>
+            <p>Its focus is on astronomy and space science: observing, asking better questions, discussing ideas, exploring astrophysical concepts, and engaging with interactive learning experiences.</p>
+            <div class="science-notes">
+              <div class="science-note"><span>01</span><div><strong>OBSERVATION</strong><p>Looking outward with care for the details that evidence reveals.</p></div></div>
+              <div class="science-note"><span>02</span><div><strong>DISCUSSION</strong><p>Making space for ideas, questions, and scientific conversation.</p></div></div>
+              <div class="science-note"><span>03</span><div><strong>EXPLORATION</strong><p>Connecting curiosity with experiments, models, and learning.</p></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section" aria-labelledby="connection-title">
+        <div class="section-heading" data-reveal>
+          <div><p class="section-label">Our connection</p><h2 id="connection-title">A scientific system, not a hierarchy.</h2></div>
+          <p>Each point supplies a different reference frame: a club for curiosity, a department for scientific foundation, and a college for academic context.</p>
+        </div>
+        <div class="connection-panel" data-reveal>
+          <div class="connection-vertical">
+            <article class="system-node"><span>01 / ASTRONOMY &amp; SPACE SCIENCE</span><h3>ASTRONOMY ACES</h3><p>A student space for curiosity, observation, and exploration.</p></article>
+            <article class="system-node"><span>02 / SCIENTIFIC FOUNDATION</span><h3>PHYSICS DEPARTMENT</h3><p>The department that anchors questions about the universe in physics.</p></article>
+            <article class="system-node"><span>03 / ACADEMIC INSTITUTION</span><h3>THAKUR COLLEGE OF SCIENCE AND COMMERCE</h3><p>The academic environment in which the club belongs.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="instagram" class="content-section" aria-labelledby="instagram-title">
+        <div class="section-heading" data-reveal>
+          <div><p class="section-label">Follow our orbit</p><h2 id="instagram-title">Stay close to the signal.</h2></div>
+          <p>Follow Astronomy Aces for the club’s official updates when its Instagram link is added to the site configuration.</p>
+        </div>
+        <div class="instagram-card" data-reveal>
+          <div class="instagram-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.4" cy="6.7" r="0.8" fill="currentColor" stroke="none"></circle></svg></div>
+          <div><h3>ASTRONOMY ACES</h3><p>Find the club’s official presence and follow its orbit.</p></div>
+          <a class="button magnetic" href="#instagram" data-instagram-link>Visit Instagram</a>
+        </div>
+        <p class="instagram-placeholder">Instagram URL placeholder: add the official account URL in <code>site-config.js</code>. No account link has been invented.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer"><span>Astronomy Aces · Physics Department</span><a href="astro_finaldraft.html">Enter the simulation</a></footer>
+  </div>
+  <script src="site-config.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>

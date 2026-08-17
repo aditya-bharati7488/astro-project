@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- PREVENTS MOBILE ZOOMING AND SCROLLING ISSUES -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#020507">
+  <title>Spacetime Merger</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    :root {
+      --ink: #e9fff7;
+      --muted: #8fa7a0;
+      --aqua: #00f0ad;
+      --aqua-deep: #00a87b;
+      --blue: #2b8cff;
+      --blue-bright: #75c6ff;
+      --gold: #ffb547;
+      --panel: rgba(3, 10, 14, 0.85);
+      --line: rgba(132, 239, 208, 0.23);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+    
+    body {
+      overflow: hidden;
+      background: #020507;
+      color: var(--ink);
+      font-family: Consolas, "Courier New", monospace;
+      /* PREVENTS SWIPE-TO-REFRESH ON PHONES */
+      touch-action: none;
+    }
+
+    .scene-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .interface { position: relative; z-index: 2; pointer-events: none; width: 100%; height: 100%; }
+    
+    .panel {
+      pointer-events: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 8px; /* Added slight rounding for modern feel */
+    }
+
+    .control-panel {
+      position: fixed;
+      top: 22px;
+      left: 22px;
+      width: 304px;
+      padding: 18px;
+      max-height: calc(100dvh - 44px);
+      overflow: auto;
+      scrollbar-width: thin;
+      animation: enter-left 700ms cubic-bezier(.2, .8, .2, 1) both;
+      transition: transform 360ms cubic-bezier(.2, .8, .2, 1), opacity 240ms ease;
+    }
+
+    .brand-mark {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+      color: var(--aqua);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin: 0;
+    }
+    .brand-mark::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border: 1px solid var(--aqua);
+      border-radius: 50%;
+      box-shadow: 0 0 16px var(--aqua);
+      animation: pulse 2.6s ease-in-out infinite;
+    }
+    .subtitle {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.45;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .panel-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-toggle, .view-toggle {
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: rgba(4, 19, 22, 0.88);
+      color: var(--aqua);
+      cursor: pointer;
+      font: inherit;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: color 180ms ease, background 180ms ease, border-color 180ms ease;
+    }
+    .panel-toggle { flex: 0 0 auto; padding: 7px 8px; }
+    .panel-toggle:hover, .view-toggle:hover { background: rgba(0, 240, 173, 0.13); border-color: var(--aqua); color: #dffff5; }
+    .panel-toggle:focus-visible, .view-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    
+    .control { margin-top: 17px; }
+    .control label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #a2bbb3;
+      font-size: 11px;
+      letter-spacing: 0.045em;
+    }
+    .control output { color: var(--ink); font-weight: 700; }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 18px;
+      margin-top: 6px;
+      cursor: pointer;
+      accent-color: var(--aqua);
+    }
+
+    .advanced-settings {
+      margin-top: 15px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .advanced-settings summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--blue-bright);
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      list-style: none;
+      text-transform: uppercase;
+    }
+    .advanced-settings summary::-webkit-details-marker { display: none; }
+    .advanced-settings summary::after { content: '+'; color: var(--aqua); font-size: 15px; line-height: 1; }
+    .advanced-settings[open] summary::after { content: '−'; }
+    .advanced-settings summary span { color: var(--muted); font-size: 8px; font-weight: 400; letter-spacing: 0.05em; }
+    .fine-tune-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 12px;
+      padding-top: 3px;
+    }
+    .fine-tune-grid .control { margin-top: 12px; }
+    .fine-tune-grid .control label { gap: 6px; font-size: 9px; line-height: 1.25; }
+    .fine-tune-grid .control output { font-size: 9px; text-align: right; }
+    
+    .action {
+      width: 100%;
+      margin-top: 14px;
+      padding: 11px 12px;
+      border: 1px solid var(--aqua);
+      border-radius: 4px;
+      background: var(--aqua);
+      color: #02120d;
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+    .action:hover { background: #7cffd7; box-shadow: 0 0 24px rgba(0, 240, 173, 0.35); transform: translateY(-1px); }
+    .action:active { transform: translateY(1px); }
+    .action:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    
+    .action.secondary {
+      margin-top: 8px;
+      border-color: rgba(255, 181, 71, 0.7);
+      background: transparent;
+      color: var(--gold);
+    }
+    .action.secondary:hover { background: rgba(255, 181, 71, 0.13); box-shadow: 0 0 20px rgba(255, 181, 71, 0.2); }
+
+    .telemetry {
+      position: fixed;
+      top: 22px;
+      right: 22px;
+      width: 290px;
+      padding: 15px 16px 16px;
+      border-color: rgba(255, 181, 71, 0.36);
+      animation: enter-right 700ms 90ms cubic-bezier(.2, .8, .2, 1) both;
+      transition: transform 360ms cubic-bezier(.2, .8, .2, 1), opacity 240ms ease;
+    }
+    
+    .telemetry-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 9px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+
+    .telemetry-heading > span:first-child { flex: 1; }
+    .telemetry .panel-toggle { margin: -5px -5px -5px 5px; color: var(--gold); border-color: rgba(255, 181, 71, 0.35); }
+    
+    .mode-tag {
+      display: none;
+      border: 1px solid rgba(255, 112, 112, 0.9);
+      color: #ff8686;
+      padding: 2px 4px;
+      font-size: 8px;
+      border-radius: 3px;
+      letter-spacing: 0.08em;
+    }
+    
+    .telemetry-grid {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 9px;
+      color: #9bb0aa;
+      font-size: 11px;
+    }
+
+    .result-row .data-value { color: var(--blue-bright); }
+    
+    .data-value { color: var(--aqua); font-weight: 700; white-space: nowrap; }
+    .collision-value { color: var(--blue-bright); text-shadow: 0 0 10px rgba(43, 140, 255, 0.38); }
+    .collision-value.is-contact { color: #fff; text-shadow: 0 0 14px rgba(117, 198, 255, 0.9); }
+    .collision-value.is-merged { color: var(--gold); text-shadow: 0 0 12px rgba(255, 181, 71, 0.68); }
+    
+    .energy-row {
+      margin-top: 13px;
+      padding-top: 9px;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .energy-value { color: var(--gold); text-shadow: 0 0 10px rgba(255, 181, 71, 0.32); }
+
+    .wave-panel {
+      position: fixed;
+      bottom: 22px;
+      left: 50%;
+      width: min(900px, calc(100% - 44px));
+      height: 166px;
+      padding: 14px 15px 13px;
+      transform: translateX(-50%);
+      animation: enter-up 800ms 170ms cubic-bezier(.2, .8, .2, 1) both;
+      transition: transform 360ms cubic-bezier(.2, .8, .2, 1), opacity 240ms ease;
+    }
+    
+    .wave-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      color: var(--aqua);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+    .wave-heading-content { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .wave-panel .panel-toggle { padding: 6px 7px; }
+    
+    #graph-source { color: #82928d; font-size: 9px; font-weight: 400; letter-spacing: 0.04em; text-transform: none; }
+    #ligo-canvas { display: block; width: 100%; height: calc(100% - 23px); }
+
+    .sound-message {
+      position: fixed;
+      top: -50px;
+      left: 50%;
+      z-index: 4;
+      padding: 9px 17px;
+      transform: translateX(-50%);
+      background: #df5151;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-radius: 0 0 6px 6px;
+      transition: top 400ms ease;
+      pointer-events: none;
+    }
+    .sound-message.visible { top: 0; }
+
+    .help-text {
+      position: fixed;
+      bottom: 198px;
+      left: 50%;
+      z-index: 1;
+      transform: translateX(-50%);
+      color: rgba(217, 255, 241, 0.57);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      pointer-events: none;
+      text-transform: uppercase;
+      animation: fade-in 1s 800ms both;
+    }
+
+    .view-toggle {
+      position: fixed;
+      top: 50%;
+      right: 14px;
+      bottom: auto;
+      z-index: 5;
+      padding: 10px 12px;
+      pointer-events: auto;
+      transform: translateY(-50%);
+    }
+
+    .control-panel.is-collapsed,
+    .telemetry.is-collapsed {
+      width: 58px;
+      min-height: 48px;
+      height: 48px;
+      max-height: 48px;
+      padding: 4px;
+      overflow: hidden;
+      transform: none;
+    }
+    .control-panel.is-collapsed .panel-title-row { display: block; }
+    .control-panel.is-collapsed .brand-mark { display: none; }
+    .control-panel.is-collapsed .panel-toggle {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      z-index: 1;
+      margin: 0;
+      visibility: visible;
+    }
+    .wave-panel.is-collapsed {
+      width: 58px;
+      height: 48px;
+      padding: 4px;
+      overflow: hidden;
+    }
+    .control-panel.is-collapsed .brand-mark,
+    .control-panel.is-collapsed .subtitle,
+    .control-panel.is-collapsed .control,
+    .control-panel.is-collapsed .advanced-settings,
+    .control-panel.is-collapsed .action,
+    .telemetry.is-collapsed .telemetry-heading > span,
+    .telemetry.is-collapsed .telemetry-grid { visibility: hidden; }
+    .telemetry.is-collapsed .panel-toggle {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      z-index: 1;
+      margin: 0;
+      visibility: visible;
+    }
+    .wave-panel.is-collapsed .wave-heading-content,
+    .wave-panel.is-collapsed #ligo-canvas { visibility: hidden; }
+    .wave-panel.is-collapsed .panel-toggle {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      margin: 0;
+      visibility: visible;
+    }
+    body.focus-mode .control-panel,
+    body.focus-mode .telemetry,
+    body.focus-mode .wave-panel {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    body.focus-mode .control-panel { transform: translateX(calc(-100% - 24px)); }
+    body.focus-mode .telemetry { transform: translateX(calc(100% + 24px)); }
+    body.focus-mode .wave-panel { transform: translate(-50%, calc(100% + 24px)); }
+    body.focus-mode .view-toggle { border-color: var(--aqua); background: rgba(0, 240, 173, 0.16); }
+    body.focus-mode .help-text { opacity: 0; }
+
+    /* ANIMATIONS */
+    @keyframes pulse { 50% { box-shadow: 0 0 5px var(--aqua); opacity: 0.55; } }
+    @keyframes enter-left { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes enter-right { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes enter-up { from { opacity: 0; transform: translate(-50%, 18px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    @keyframes enter-down { from { opacity: 0; transform: translate(-50%, -18px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ========================================= */
+    /* MOBILE OPTIMIZATION (RESPONSIVE RESIZING) */
+    /* ========================================= */
+    @media (max-width: 768px) {
+      .control-panel { 
+        top: 12px; 
+        left: 50%; 
+        width: calc(100% - 24px); 
+        max-width: 400px;
+        padding: 12px 14px; 
+        transform: translateX(-50%);
+        animation: enter-down 700ms cubic-bezier(.2, .8, .2, 1) both;
+      }
+      .brand-mark { font-size: 15px; }
+      .control { margin-top: 10px; }
+      .control label { font-size: 10px; }
+      .action { margin-top: 10px; padding: 10px; font-size: 10px; }
+      .fine-tune-grid { gap: 0 10px; }
+      .fine-tune-grid .control { margin-top: 10px; }
+      .fine-tune-grid .control label { font-size: 8px; }
+      
+      .telemetry { 
+        top: auto; 
+        bottom: 120px; /* Sits right above the wave panel */
+        left: 50%;
+        right: auto;
+        width: calc(100% - 24px); 
+        max-width: 400px;
+        padding: 10px 12px; 
+        transform: translateX(-50%);
+        animation: enter-up 700ms 90ms cubic-bezier(.2, .8, .2, 1) both;
+      }
+      
+      .telemetry-heading { padding-bottom: 6px; font-size: 10px; margin-bottom: 4px; }
+      
+      /* Converts telemetry list into a dense 2-column grid to save vertical space */
+      .telemetry-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 12px;
+        row-gap: 0px;
+      }
+      
+      .data-row { 
+        margin-top: 4px; 
+        font-size: 9px; 
+        flex-direction: column; /* Stack label above value */
+        align-items: flex-start;
+        gap: 2px;
+      }
+      .data-row span:first-child { font-size: 8px; opacity: 0.75; text-transform: uppercase;}
+      
+      /* Energy row spans both columns at the bottom */
+      .energy-row { 
+        grid-column: span 2; 
+        margin-top: 6px; 
+        padding-top: 6px; 
+        flex-direction: row; 
+        align-items: center; 
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .energy-row span:first-child { font-size: 9px; }
+      
+      .wave-panel { 
+        width: calc(100% - 24px);
+        height: 100px; /* Shorter on mobile */
+        bottom: 12px;
+        padding: 8px 10px;
+      }
+      .wave-heading { font-size: 9px; margin-bottom: 4px; }
+      #graph-source { font-size: 7px; }
+      #ligo-canvas { height: calc(100% - 15px); }
+
+      .help-text { display: none; /* Hide to prevent clutter on small screens */ }
+      .view-toggle { top: 50%; right: 8px; bottom: auto; padding: 8px 10px; font-size: 8px; transform: translateY(-50%); }
+      .control-panel.is-collapsed { left: 12px; transform: none; }
+      .telemetry.is-collapsed { top: 12px; right: 12px; bottom: auto; left: auto; transform: none; }
+      body.focus-mode .control-panel { transform: translateX(calc(-50% - 100vw)); }
+      body.focus-mode .telemetry { transform: translateX(calc(-50% + 100vw)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="audio-warning" class="sound-message" aria-live="polite">Audio engine armed. Turn up your volume.</div>
+
+  <main class="interface" aria-label="Black hole merger visualizer">
+    <button id="view-toggle" class="view-toggle" type="button" aria-pressed="false">Focus view</button>
+    
+    <!-- CONTROLS -->
+    <section id="control-panel" class="control-panel panel" aria-labelledby="sim-title">
+      <div class="panel-title-row">
+        <h1 id="sim-title" class="brand-mark">Spacetime Merger</h1>
+        <button id="controls-toggle" class="panel-toggle" type="button" aria-expanded="true" aria-controls="control-panel">Hide</button>
+      </div>
+      <span class="subtitle">Blue spacetime lensing and gravitational-wave sonification</span>
+
+      <div class="control">
+        <label for="mass">Total mass <output><span id="mass-val">65</span> M_sun</output></label>
+        <input type="range" id="mass" min="20" max="150" value="65" step="1">
+      </div>
+      <div class="control">
+        <label for="ratio">Mass ratio (q) <output id="ratio-val">0.8</output></label>
+        <input type="range" id="ratio" min="0.1" max="1" step="0.1" value="0.8">
+      </div>
+
+      <details id="advanced-settings" class="advanced-settings" open>
+        <summary>Fine-tune this merger <span>6 inputs</span></summary>
+        <div class="fine-tune-grid">
+          <div class="control">
+            <label for="spin">Spin (χ) <output id="spin-val">0.45</output></label>
+            <input type="range" id="spin" min="0" max="0.99" step="0.01" value="0.45">
+          </div>
+          <div class="control">
+            <label for="separation">Start distance <output id="separation-val">1.00×</output></label>
+            <input type="range" id="separation" min="0.7" max="1.35" step="0.01" value="1">
+          </div>
+          <div class="control">
+            <label for="tilt">Orbital tilt <output id="tilt-val">18°</output></label>
+            <input type="range" id="tilt" min="0" max="70" step="1" value="18">
+          </div>
+          <div class="control">
+            <label for="inclination">View angle <output id="inclination-val">35°</output></label>
+            <input type="range" id="inclination" min="0" max="90" step="1" value="35">
+          </div>
+          <div class="control">
+            <label for="distance">Source distance <output id="distance-val">410 Mpc</output></label>
+            <input type="range" id="distance" min="100" max="2500" step="10" value="410">
+          </div>
+          <div class="control">
+            <label for="tempo">Time scale <output id="tempo-val">1.00×</output></label>
+            <input type="range" id="tempo" min="0.5" max="1.5" step="0.05" value="1">
+          </div>
+        </div>
+      </details>
+
+      <button id="play-btn" class="action" type="button">Play Optimized Sandbox</button>
+      <button id="btn-data" class="action secondary" type="button">Load GW150914 Profile</button>
+    </section>
+
+    <!-- TELEMETRY HUD -->
+    <aside id="telemetry-panel" class="telemetry panel" aria-label="Simulation telemetry and personalized results">
+      <div class="telemetry-heading"><span>Telemetry &amp; your result</span><span id="mode-tag" class="mode-tag">Profile Mode</span><button id="telemetry-toggle" class="panel-toggle" type="button" aria-expanded="true" aria-controls="telemetry-panel">Hide</button></div>
+      <div class="telemetry-grid">
+        <div class="data-row result-row"><span>Primary mass</span><span id="hud-primary" class="data-value">36.1 M_sun</span></div>
+        <div class="data-row result-row"><span>Companion mass</span><span id="hud-secondary" class="data-value">28.9 M_sun</span></div>
+        <div class="data-row result-row"><span>Chirp mass</span><span id="hud-chirp" class="data-value">28.1 M_sun</span></div>
+        <div class="data-row result-row"><span>Observer signal</span><span id="hud-signal" class="data-value">100%</span></div>
+        <div class="data-row result-row"><span>Expected peak</span><span id="hud-estimate" class="data-value">5.8e47 J</span></div>
+        <div class="data-row"><span>Audio Freq</span><span id="hud-freq" class="data-value">0 Hz</span></div>
+        <div class="data-row"><span>Orbital Vel</span><span id="hud-v" class="data-value">0.000 c</span></div>
+        <div class="data-row"><span>Separation</span><span id="hud-r" class="data-value">0 km</span></div>
+        <div class="data-row"><span>State</span><span id="hud-collision" class="data-value collision-value">Orbit lock</span></div>
+        <div class="data-row energy-row"><span>Peak energy output</span><span id="hud-energy" class="data-value energy-value">0.0 J</span></div>
+      </div>
+    </aside>
+
+    <p class="help-text">Drag to orbit the field. Scroll to zoom.</p>
+
+    <!-- WAVEFORM GRAPH -->
+    <section id="wave-panel" class="wave-panel panel" aria-labelledby="wave-title">
+      <div class="wave-heading"><div class="wave-heading-content"><span id="wave-title">Gravitational wave strain</span><span id="graph-source">Source: sandbox math</span></div><button id="wave-toggle" class="panel-toggle" type="button" aria-expanded="true" aria-controls="wave-panel">Hide</button></div>
+      <canvas id="ligo-canvas" aria-label="Live gravitational wave strain chart"></canvas>
+    </section>
+  </main>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+    const $ = (id) => document.getElementById(id);
+    const massSlider = $('mass');
+    const ratioSlider = $('ratio');
+    const spinSlider = $('spin');
+    const separationSlider = $('separation');
+    const tiltSlider = $('tilt');
+    const inclinationSlider = $('inclination');
+    const distanceSlider = $('distance');
+    const tempoSlider = $('tempo');
+    const personalSliders = [massSlider, ratioSlider, spinSlider, separationSlider, tiltSlider, inclinationSlider, distanceSlider, tempoSlider];
+    const ligoCanvas = $('ligo-canvas');
+    const ligoContext = ligoCanvas.getContext('2d');
+    const hud = {
+      frequency: $('hud-freq'),
+      velocity: $('hud-v'),
+      separation: $('hud-r'),
+      collision: $('hud-collision'),
+      energy: $('hud-energy'),
+      primary: $('hud-primary'),
+      secondary: $('hud-secondary'),
+      chirp: $('hud-chirp'),
+      signal: $('hud-signal'),
+      estimate: $('hud-estimate'),
+      mode: $('mode-tag'),
+      source: $('graph-source'),
+      playButton: $('play-btn')
+    };
+
+    const gw150914Profile = Array.from({ length: 1001 }, (_, index) => {
+      const progress = index / 800;
+      if (index <= 800) {
+        return {
+          time: index / 100,
+          frequency: 20 + 230 * Math.pow(progress, 4),
+          amplitude: 0.1 + 4.5 * Math.pow(progress, 2.5),
+          velocity: Math.min(0.6, 0.05 + 0.55 * Math.pow(progress, 4))
+        };
+      }
+      const ringdown = (index - 800) / 200;
+      return {
+        time: index / 100,
+        frequency: 250 * Math.exp(-ringdown * 2),
+        amplitude: 4.6 * Math.exp(-ringdown * 6),
+        velocity: 0
+      };
+    });
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x020507);
+    scene.fog = new THREE.FogExp2(0x020507, 0.0024);
+
+    const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 2000);
+    camera.position.set(0, 100, 250);
+
+    const initialPixelRatio = Math.min(devicePixelRatio, 2);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(initialPixelRatio);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
+    renderer.domElement.className = 'scene-canvas';
+    renderer.domElement.setAttribute('aria-hidden', 'true');
+    document.body.prepend(renderer.domElement);
+
+    const orbit = new OrbitControls(camera, renderer.domElement);
+    orbit.enableDamping = true;
+    orbit.dampingFactor = 0.06;
+    orbit.minDistance = 95;
+    orbit.maxDistance = 480;
+    orbit.maxPolarAngle = Math.PI * 0.48;
+
+    const starGeometry = new THREE.BufferGeometry();
+    const starPositions = [];
+    for (let i = 0; i < 5000; i += 1) {
+      starPositions.push(
+        (Math.random() - 0.5) * 1050,
+        (Math.random() - 0.5) * 800,
+        (Math.random() - 0.5) * 1000 - 260
+      );
+    }
+    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({
+      color: 0xd9fff1,
+      size: 1.6,
+      sizeAttenuation: false,
+      transparent: true,
+      opacity: 0.86
+    }));
+    scene.add(stars);
+
+    const lensingShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        bh1Pos: { value: new THREE.Vector2(0.5, 0.5) },
+        bh2Pos: { value: new THREE.Vector2(0.5, 0.5) },
+        mass1: { value: 0 },
+        mass2: { value: 0 },
+        resolution: { value: new THREE.Vector2(innerWidth, innerHeight) }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform vec2 bh1Pos;
+        uniform vec2 bh2Pos;
+        uniform float mass1;
+        uniform float mass2;
+        uniform vec2 resolution;
+        varying vec2 vUv;
+        void main() {
+          vec2 aspect = vec2(resolution.x / resolution.y, 1.0);
+          vec2 uv = vUv * aspect;
+          vec2 first = bh1Pos * aspect;
+          vec2 second = bh2Pos * aspect;
+          vec2 delta1 = uv - first;
+          vec2 delta2 = uv - second;
+          float distance1 = max(length(delta1), 0.001);
+          float distance2 = max(length(delta2), 0.001);
+          vec2 offset = vec2(0.0);
+          offset += (delta1 / distance1) * clamp(mass1 / (distance1 * 30.0), 0.0, 0.5);
+          offset += (delta2 / distance2) * clamp(mass2 / (distance2 * 30.0), 0.0, 0.5);
+          if (distance1 < mass1 * 0.02 || distance2 < mass2 * 0.02) {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+          } else {
+            gl_FragColor = texture2D(tDiffuse, clamp(vUv - offset, 0.0, 1.0));
+          }
+        }
+      `
+    };
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    const lensingPass = new ShaderPass(lensingShader);
+    composer.addPass(lensingPass);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.2, 0.64, 0.34);
+    composer.addPass(bloomPass);
+    composer.addPass(new OutputPass());
+
+    const renderGovernor = {
+      maximumPixelRatio: initialPixelRatio,
+      minimumPixelRatio: 1,
+      currentPixelRatio: initialPixelRatio,
+      averageDelta: 1 / 60,
+      evaluationTime: 0,
+      cooldown: 0
+    };
+
+    function applyRenderQuality(pixelRatio) {
+      const roundedRatio = Math.round(pixelRatio * 4) / 4;
+      renderGovernor.currentPixelRatio = THREE.MathUtils.clamp(
+        roundedRatio,
+        renderGovernor.minimumPixelRatio,
+        renderGovernor.maximumPixelRatio
+      );
+      renderer.setPixelRatio(renderGovernor.currentPixelRatio);
+      composer.setPixelRatio(renderGovernor.currentPixelRatio);
+      composer.setSize(innerWidth, innerHeight);
+      bloomPass.strength = renderGovernor.currentPixelRatio < 1.3 ? 1.02 : 1.2;
+    }
+
+    function updateRenderQuality(delta) {
+      renderGovernor.averageDelta = THREE.MathUtils.lerp(renderGovernor.averageDelta, delta, 0.045);
+      renderGovernor.evaluationTime += delta;
+      renderGovernor.cooldown = Math.max(0, renderGovernor.cooldown - delta);
+      if (renderGovernor.evaluationTime < 1.6 || renderGovernor.cooldown > 0) return;
+      renderGovernor.evaluationTime = 0;
+      const targetFrameTime = 1 / 48;
+      const recoveryFrameTime = 1 / 70;
+      if (renderGovernor.averageDelta > targetFrameTime && renderGovernor.currentPixelRatio > renderGovernor.minimumPixelRatio) {
+        applyRenderQuality(renderGovernor.currentPixelRatio - 0.25);
+        renderGovernor.cooldown = 2.4;
+      } else if (renderGovernor.averageDelta < recoveryFrameTime && renderGovernor.currentPixelRatio < renderGovernor.maximumPixelRatio) {
+        applyRenderQuality(renderGovernor.currentPixelRatio + 0.25);
+        renderGovernor.cooldown = 3.8;
+      }
+    }
+
+    applyRenderQuality(initialPixelRatio);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.12));
+    const mergerFlash = new THREE.PointLight(0xbfe5ff, 0, 1500, 2);
+    scene.add(mergerFlash);
+
+    // Responsive grid resolution
+    const isMobile = matchMedia('(max-width: 768px)').matches;
+    const gridSegments = isMobile ? 82 : 116;
+    const gridGeometry = new THREE.PlaneGeometry(500, 500, gridSegments, gridSegments);
+    gridGeometry.rotateX(-Math.PI / 2);
+    const gridPosition = gridGeometry.getAttribute('position');
+    gridPosition.setUsage(THREE.DynamicDrawUsage);
+    const gridBaseX = new Float32Array(gridPosition.count);
+    const gridBaseZ = new Float32Array(gridPosition.count);
+    const gridCenterDistance = new Float32Array(gridPosition.count);
+    for (let index = 0; index < gridPosition.count; index += 1) {
+      const x = gridPosition.getX(index);
+      const z = gridPosition.getZ(index);
+      gridBaseX[index] = x;
+      gridBaseZ[index] = z;
+      gridCenterDistance[index] = Math.max(1, Math.hypot(x, z));
+    }
+    const blueFieldGeometry = new THREE.PlaneGeometry(500, 500);
+    blueFieldGeometry.rotateX(-Math.PI / 2);
+    const blueField = new THREE.Mesh(blueFieldGeometry, new THREE.MeshBasicMaterial({
+      color: 0x06285d,
+      transparent: true,
+      opacity: 0.13,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    }));
+    blueField.position.y = -0.15;
+    const grid = new THREE.Mesh(gridGeometry, new THREE.MeshBasicMaterial({
+      color: 0x258dff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    }));
+    grid.renderOrder = 1;
+    scene.add(blueField, grid);
+
+    function createGlowTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const context = canvas.getContext('2d');
+      const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.12, 'rgba(183, 229, 255, 0.92)');
+      gradient.addColorStop(0.4, 'rgba(61, 141, 255, 0.3)');
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 128, 128);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    const glowTexture = createGlowTexture();
+    function createBlackHole(color) {
+      const group = new THREE.Group();
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTexture,
+        color,
+        transparent: true,
+        opacity: 0.62,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      }));
+      glow.scale.setScalar(8.4);
+      const voidMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 32, 32),
+        new THREE.MeshBasicMaterial({ color: 0x000000 })
+      );
+      const accretionRing = new THREE.Mesh(
+        new THREE.TorusGeometry(1.8, 0.06, 16, 64),
+        new THREE.MeshBasicMaterial({ color, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.98, depthWrite: false })
+      );
+      const outerRing = new THREE.Mesh(
+        new THREE.TorusGeometry(2.55, 0.018, 10, 64),
+        new THREE.MeshBasicMaterial({ color: 0x9ddcff, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.55, depthWrite: false })
+      );
+      accretionRing.rotation.x = Math.PI / 2.2;
+      outerRing.rotation.set(Math.PI / 2.05, 0.42, 0);
+      group.add(glow, voidMesh, accretionRing, outerRing);
+      group.userData = { glow, accretionRing, outerRing };
+      return group;
+    }
+
+    const blackHoleOne = createBlackHole(0x2b8cff);
+    const blackHoleTwo = createBlackHole(0x00d7ff);
+    const mergedBlackHole = createBlackHole(0xffbd4f);
+    mergedBlackHole.visible = false;
+    scene.add(blackHoleOne, blackHoleTwo, mergedBlackHole);
+
+    const trailCapacity = 96;
+    function createTrail(color) {
+      const positions = new Float32Array(trailCapacity * 3);
+      const geometry = new THREE.BufferGeometry();
+      const attribute = new THREE.BufferAttribute(positions, 3);
+      attribute.setUsage(THREE.DynamicDrawUsage);
+      geometry.setAttribute('position', attribute);
+      geometry.setDrawRange(0, 0);
+      const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.42,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      }));
+      line.frustumCulled = false;
+      scene.add(line);
+      return { positions, geometry, attribute, count: 0, timer: 0 };
+    }
+    const firstTrail = createTrail(0x2b8cff);
+    const secondTrail = createTrail(0x00d7ff);
+
+    const tidalBridgeGeometry = new THREE.BufferGeometry();
+    const tidalBridgePositions = new Float32Array(6);
+    tidalBridgeGeometry.setAttribute('position', new THREE.BufferAttribute(tidalBridgePositions, 3));
+    const tidalBridge = new THREE.Line(tidalBridgeGeometry, new THREE.LineBasicMaterial({
+      color: 0xd7f1ff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    }));
+    tidalBridge.visible = false;
+    scene.add(tidalBridge);
+
+    const collisionCore = new THREE.Group();
+    const coreGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: glowTexture,
+      color: 0xaee4ff,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    }));
+    coreGlow.scale.setScalar(32);
+    const coreSphere = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 24, 24),
+      new THREE.MeshBasicMaterial({ color: 0xd5f5ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
+    );
+    collisionCore.add(coreGlow, coreSphere);
+    const impactRings = [];
+    for (let index = 0; index < 4; index += 1) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1, 0.035 - index * 0.005, 10, 96),
+        new THREE.MeshBasicMaterial({ color: index % 2 ? 0x75c6ff : 0xe1f6ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
+      );
+      ring.rotation.x = Math.PI / 2;
+      collisionCore.add(ring);
+      impactRings.push(ring);
+    }
+    collisionCore.visible = false;
+    scene.add(collisionCore);
+
+    // Reduced mobile particle count for better GPU performance
+    const particleCount = isMobile ? 800 : 2200;
+    const particleGeometry = new THREE.BufferGeometry();
+    const particlePositions = new Float32Array(particleCount * 3);
+    const particleVelocities = new Float32Array(particleCount * 3);
+    const particleColors = new Uint8Array(particleCount * 3);
+    for (let index = 0; index < particleCount; index += 1) {
+      const phi = Math.acos(Math.random() * 2 - 1);
+      const theta = Math.random() * Math.PI * 2;
+      const speed = 42 + Math.random() * 138;
+      particleVelocities[index * 3] = Math.sin(phi) * Math.cos(theta) * speed;
+      particleVelocities[index * 3 + 1] = Math.sin(phi) * Math.sin(theta) * speed * 0.72;
+      particleVelocities[index * 3 + 2] = Math.cos(phi) * speed;
+      const warm = Math.random() > 0.42;
+      particleColors[index * 3] = warm ? 255 : 125;
+      particleColors[index * 3 + 1] = warm ? 202 : 204;
+      particleColors[index * 3 + 2] = warm ? 105 : 255;
+    }
+    const particlePositionAttribute = new THREE.BufferAttribute(particlePositions, 3);
+    particlePositionAttribute.setUsage(THREE.DynamicDrawUsage);
+    particleGeometry.setAttribute('position', particlePositionAttribute);
+    particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3, true));
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 2.1,
+      transparent: true,
+      vertexColors: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true
+    });
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    particles.visible = false;
+    particles.frustumCulled = false;
+    scene.add(particles);
+
+    let audioContext;
+    let oscillator;
+    let gain;
+    let audioNoticeTimer;
+    function activateAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        oscillator = audioContext.createOscillator();
+        gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        gain.gain.value = 0;
+        oscillator.connect(gain).connect(audioContext.destination);
+        oscillator.start();
+      }
+      if (audioContext.state === 'suspended') audioContext.resume();
+      $('audio-warning').classList.add('visible');
+      clearTimeout(audioNoticeTimer);
+      audioNoticeTimer = setTimeout(() => $('audio-warning').classList.remove('visible'), 3500);
+    }
+
+    const CONTACT_START = 7.55;
+    const MERGER_TIME = 8.2;
+    const SIMULATION_END = 10.8;
+    const GRID_INTERVAL = 1 / 30;
+    const WAVE_INTERVAL = 1 / 30;
+    const TRAIL_INTERVAL = 1 / 24;
+    const WAVE_SAMPLE_INTERVAL = 1 / 90;
+    const MAX_STRAIN_POINTS = 760;
+
+    let playing = false;
+    let elapsed = 0;
+    let phase = 0;
+    let dataIndex = 0;
+    let referenceMode = false;
+    let strainPoints = [];
+    let contactStarted = false;
+    let mergerTriggered = false;
+    let frameDelta = 0;
+    let gridTimer = Infinity;
+    let gridNeedsRefresh = true;
+    let waveTimer = Infinity;
+    let waveSampleTimer = 0;
+    let telemetryTimer = Infinity;
+    let waveDirty = true;
+    const projectedPosition = new THREE.Vector3();
+
+    function refreshWaveform() {
+      waveTimer = Infinity;
+      waveDirty = true;
+    }
+
+    const waveformSizeObserver = new ResizeObserver(refreshWaveform);
+    waveformSizeObserver.observe($('wave-panel'));
+
+    function readPersonalSettings() {
+      return {
+        totalMass: Number(massSlider.value),
+        ratio: Number(ratioSlider.value),
+        spin: Number(spinSlider.value),
+        separationScale: Number(separationSlider.value),
+        tilt: Number(tiltSlider.value),
+        inclination: Number(inclinationSlider.value),
+        distance: Number(distanceSlider.value),
+        tempo: Number(tempoSlider.value)
+      };
+    }
+
+    const smoothedSettings = readPersonalSettings();
+
+    function syncSimulationSettings() {
+      Object.assign(smoothedSettings, readPersonalSettings());
+    }
+
+    function updateSimulationSettings(delta) {
+      const target = readPersonalSettings();
+      const blend = 1 - Math.exp(-Math.max(0, delta) * 8);
+      Object.keys(smoothedSettings).forEach((key) => {
+        smoothedSettings[key] = THREE.MathUtils.lerp(smoothedSettings[key], target[key], blend);
+      });
+      return smoothedSettings;
+    }
+
+    function signalStrength(settings) {
+      const inclination = THREE.MathUtils.degToRad(settings.inclination);
+      const orientation = Math.sqrt(Math.pow((1 + Math.cos(inclination) ** 2) / 2, 2) + Math.cos(inclination) ** 2) / Math.SQRT2;
+      return orientation * THREE.MathUtils.clamp(410 / settings.distance, 0.16, 3.2);
+    }
+
+    function componentMasses(settings) {
+      return {
+        primary: settings.totalMass / (1 + settings.ratio),
+        secondary: settings.totalMass * settings.ratio / (1 + settings.ratio)
+      };
+    }
+
+    function radiatedEnergy(totalMass, ratio, spin) {
+      const massBalance = 4 * ratio / Math.pow(1 + ratio, 2);
+      return totalMass * (0.035 + spin * 0.028) * (0.65 + massBalance * 0.35) * 1.787e47;
+    }
+
+    function updatePersonalizedResult() {
+      const settings = readPersonalSettings();
+      const masses = componentMasses(settings);
+      const chirpMass = settings.totalMass * Math.pow(settings.ratio / Math.pow(1 + settings.ratio, 2), 3 / 5);
+      const expectedEnergy = radiatedEnergy(settings.totalMass, settings.ratio, settings.spin);
+      hud.primary.textContent = `${masses.primary.toFixed(1)} M_sun`;
+      hud.secondary.textContent = `${masses.secondary.toFixed(1)} M_sun`;
+      hud.chirp.textContent = `${chirpMass.toFixed(1)} M_sun`;
+      hud.signal.textContent = `${Math.round(signalStrength(settings) * 100)}%`;
+      hud.estimate.textContent = `${expectedEnergy.toExponential(2)} J`;
+    }
+
+    function setCollisionState(label, modifier = '') {
+      hud.collision.textContent = label;
+      hud.collision.className = `data-value collision-value ${modifier}`.trim();
+    }
+
+    function updateSliderLabels() {
+      $('mass-val').textContent = massSlider.value;
+      $('ratio-val').textContent = Number(ratioSlider.value).toFixed(1);
+      $('spin-val').textContent = Number(spinSlider.value).toFixed(2);
+      $('separation-val').textContent = `${Number(separationSlider.value).toFixed(2)}×`;
+      $('tilt-val').textContent = `${tiltSlider.value}°`;
+      $('inclination-val').textContent = `${inclinationSlider.value}°`;
+      $('distance-val').textContent = `${distanceSlider.value} Mpc`;
+      $('tempo-val').textContent = `${Number(tempoSlider.value).toFixed(2)}×`;
+      updatePersonalizedResult();
+    }
+
+    function clearTrail(trail) {
+      trail.positions.fill(0);
+      trail.count = 0;
+      trail.timer = 0;
+      trail.geometry.setDrawRange(0, 0);
+      trail.attribute.needsUpdate = true;
+    }
+
+    function recordTrail(trail, position, delta) {
+      trail.timer += delta;
+      if (trail.timer < TRAIL_INTERVAL) return;
+      trail.timer = 0;
+      const nextCount = Math.min(trail.count + 1, trailCapacity);
+      if (trail.count > 0) trail.positions.copyWithin(0, 3, trail.count * 3);
+      const offset = (nextCount - 1) * 3;
+      trail.positions[offset] = position.x;
+      trail.positions[offset + 1] = position.y;
+      trail.positions[offset + 2] = position.z;
+      trail.count = nextCount;
+      trail.geometry.setDrawRange(0, trail.count);
+      trail.attribute.needsUpdate = true;
+    }
+
+    function resetCollisionVisuals() {
+      collisionCore.visible = false;
+      coreGlow.material.opacity = 0;
+      coreSphere.material.opacity = 0;
+      tidalBridge.visible = false;
+      tidalBridge.material.opacity = 0;
+      impactRings.forEach((ring) => {
+        ring.material.opacity = 0;
+        ring.scale.setScalar(1);
+      });
+    }
+
+    function spawnDebris() {
+      particlePositions.fill(0);
+      particlePositionAttribute.needsUpdate = true;
+      particles.visible = true;
+      particleMaterial.opacity = 1;
+    }
+
+    function resetSimulation() {
+      playing = false;
+      elapsed = 0;
+      phase = 0;
+      dataIndex = 0;
+      strainPoints = [];
+      contactStarted = false;
+      mergerTriggered = false;
+      gridTimer = Infinity;
+      gridNeedsRefresh = true;
+      waveTimer = Infinity;
+      waveSampleTimer = 0;
+      telemetryTimer = Infinity;
+      waveDirty = true;
+      blackHoleOne.visible = true;
+      blackHoleTwo.visible = true;
+      mergedBlackHole.visible = false;
+      particles.visible = false;
+      particleMaterial.opacity = 1;
+      particlePositions.fill(0);
+      particlePositionAttribute.needsUpdate = true;
+      mergerFlash.intensity = 0;
+      clearTrail(firstTrail);
+      clearTrail(secondTrail);
+      resetCollisionVisuals();
+      hud.frequency.textContent = '0 Hz';
+      hud.velocity.textContent = '0.000 c';
+      hud.separation.textContent = '0 km';
+      hud.energy.textContent = '0.0 J';
+      setCollisionState('Orbit lock');
+    }
+
+    function beginSimulation(mode) {
+      activateAudio();
+      referenceMode = mode === 'reference';
+      if (referenceMode) {
+        massSlider.value = 65;
+        ratioSlider.value = 0.8;
+        spinSlider.value = 0.67;
+        separationSlider.value = 1;
+        tiltSlider.value = 18;
+        inclinationSlider.value = 35;
+        distanceSlider.value = 410;
+        tempoSlider.value = 1;
+      }
+      updateSliderLabels();
+      syncSimulationSettings();
+      hud.mode.style.display = referenceMode ? 'inline' : 'none';
+      hud.source.textContent = referenceMode ? 'Source: GW150914 reference profile' : 'Source: sandbox math';
+      resetSimulation();
+      playing = true;
+      hud.playButton.textContent = 'Simulating...';
+    }
+
+    function currentDataPoint(totalMass, spin) {
+      if (referenceMode) {
+        dataIndex = Math.min(gw150914Profile.length - 1, Math.floor((elapsed / 10) * 1000));
+        const point = gw150914Profile[dataIndex];
+        phase += point.frequency / 40 * frameDelta;
+        return point;
+      }
+      const progress = Math.min(1, elapsed / MERGER_TIME);
+      const isRingdown = elapsed > MERGER_TIME;
+      const ringdownTime = isRingdown ? (elapsed - MERGER_TIME) / 2 : 0;
+      const spinFactor = 0.8 + spin * 0.48;
+      const chirp = (0.5 + 15 * Math.pow(progress, 3)) * spinFactor;
+      phase += (isRingdown ? 20 * spinFactor : chirp) * frameDelta;
+      return {
+        frequency: isRingdown ? 400 * spinFactor * Math.exp(-ringdownTime * 3) : 20 + chirp * (800 / totalMass),
+        amplitude: isRingdown ? 5 * Math.exp(-ringdownTime * 6) : 4.5 * Math.pow(progress, 2),
+        velocity: isRingdown ? 0 : Math.min(0.6, 0.05 + 0.55 * Math.pow(progress, 4))
+      };
+    }
+
+    function startContact() {
+      contactStarted = true;
+      collisionCore.visible = true;
+      tidalBridge.visible = true;
+      setCollisionState('Contact forming', 'is-contact');
+    }
+
+    function completeMerger(totalMass, ratio, spin) {
+      mergerTriggered = true;
+      blackHoleOne.visible = false;
+      blackHoleTwo.visible = false;
+      mergedBlackHole.visible = true;
+      collisionCore.visible = true;
+      tidalBridge.visible = false;
+      mergerFlash.intensity = 9200;
+      spawnDebris();
+      hud.energy.textContent = `${radiatedEnergy(totalMass, ratio, spin).toExponential(2)} J`;
+      setCollisionState('Merger confirmed', 'is-merged');
+    }
+
+    function updateCollisionVisuals(totalMass, contactAmount, mergerAge, delta) {
+      const contactActive = contactStarted && !mergerTriggered;
+      if (contactActive) {
+        const pulse = 0.55 + Math.sin(elapsed * 24) * 0.45;
+        coreGlow.material.opacity = 0.22 + contactAmount * 0.52 + pulse * 0.12;
+        coreGlow.scale.setScalar(22 + contactAmount * 30 + pulse * 2);
+        coreSphere.material.opacity = 0.12 + contactAmount * 0.44;
+        coreSphere.scale.setScalar(1.5 + contactAmount * 3.8);
+        tidalBridge.material.opacity = 0.16 + contactAmount * 0.74;
+        tidalBridgePositions[0] = blackHoleOne.position.x;
+        tidalBridgePositions[1] = blackHoleOne.position.y;
+        tidalBridgePositions[2] = blackHoleOne.position.z;
+        tidalBridgePositions[3] = blackHoleTwo.position.x;
+        tidalBridgePositions[4] = blackHoleTwo.position.y;
+        tidalBridgePositions[5] = blackHoleTwo.position.z;
+        tidalBridgeGeometry.attributes.position.needsUpdate = true;
+        impactRings.forEach((ring, index) => {
+          ring.material.opacity = (0.38 - index * 0.05) * (0.35 + contactAmount * 0.65);
+          ring.scale.setScalar(4.5 + index * 3 + contactAmount * (6 + index * 1.4));
+          ring.rotation.z += delta * (1.2 + index * 0.35);
+        });
+        return;
+      }
+
+      if (mergerTriggered && mergerAge < 2.65) {
+        const fade = Math.max(0, 1 - mergerAge / 2.65);
+        coreGlow.material.opacity = fade * 0.92;
+        coreGlow.scale.setScalar(38 + mergerAge * 54);
+        coreSphere.material.opacity = fade * 0.72;
+        coreSphere.scale.setScalar(4 + mergerAge * 7);
+        impactRings.forEach((ring, index) => {
+          ring.material.opacity = fade * (0.64 - index * 0.08);
+          ring.scale.setScalar(10 + index * 8 + mergerAge * (30 + index * 7));
+          ring.rotation.z += delta * (2.2 + index * 0.4);
+        });
+      } else if (mergerTriggered) {
+        collisionCore.visible = false;
+      }
+
+      if (mergerTriggered) {
+        mergerFlash.intensity = Math.max(0, mergerFlash.intensity - delta * 4400);
+        if (mergerAge < 1.9) {
+          const travel = Math.max(0.32, 1 - mergerAge * 0.32);
+          for (let index = 0; index < particleCount; index += 1) {
+            const offset = index * 3;
+            particlePositions[offset] += particleVelocities[offset] * delta * travel;
+            particlePositions[offset + 1] += particleVelocities[offset + 1] * delta * travel;
+            particlePositions[offset + 2] += particleVelocities[offset + 2] * delta * travel;
+          }
+          particlePositionAttribute.needsUpdate = true;
+          particleMaterial.opacity = Math.max(0, 1 - mergerAge / 1.75);
+        } else {
+          particles.visible = false;
+        }
+      }
+    }
+
+    function updateBlueGrid(totalMass, firstMass, secondMass, activeAmplitude, collisionAmount, mergerAge, delta) {
+      if (!playing && !gridNeedsRefresh) return;
+      gridTimer += delta;
+      if (gridTimer < GRID_INTERVAL) return;
+      gridTimer = 0;
+      const positions = gridPosition.array;
+      const firstX = blackHoleOne.position.x;
+      const firstZ = blackHoleOne.position.z;
+      const secondX = blackHoleTwo.position.x;
+      const secondZ = blackHoleTwo.position.z;
+      const merged = mergedBlackHole.visible;
+      const impactWave = mergerTriggered ? Math.max(0, 1 - mergerAge / 2.4) : collisionAmount * 0.38;
+      for (let index = 0; index < gridPosition.count; index += 1) {
+        const x = gridBaseX[index];
+        const z = gridBaseZ[index];
+        const centerDistance = gridCenterDistance[index];
+        let height = 0;
+        if (!merged) {
+          const dxOne = x - firstX;
+          const dzOne = z - firstZ;
+          const dxTwo = x - secondX;
+          const dzTwo = z - secondZ;
+          height -= firstMass * 3.1 / Math.max(2.5, Math.sqrt(dxOne * dxOne + dzOne * dzOne));
+          height -= secondMass * 3.1 / Math.max(2.5, Math.sqrt(dxTwo * dxTwo + dzTwo * dzTwo));
+        } else {
+          height -= totalMass * 3.2 / centerDistance;
+        }
+        if (activeAmplitude) {
+          height += Math.sin(centerDistance * 0.4 - phase * 2) * activeAmplitude * 1.45 / Math.max(1, centerDistance * 0.025);
+        }
+        if (impactWave) {
+          height += Math.sin(centerDistance * 0.57 - mergerAge * 20) * impactWave * 22 / Math.max(1, centerDistance * 0.045);
+        }
+        positions[index * 3 + 1] = height;
+      }
+      gridPosition.needsUpdate = true;
+      grid.material.opacity = 0.46 + Math.min(0.2, collisionAmount * 0.18 + impactWave * 0.14);
+      blueField.material.opacity = 0.13 + Math.min(0.14, collisionAmount * 0.08 + impactWave * 0.12);
+      gridNeedsRefresh = false;
+    }
+
+    function updateLensing(firstMass, secondMass, totalMass) {
+      camera.updateMatrixWorld();
+      if (blackHoleOne.visible) {
+        projectedPosition.copy(blackHoleOne.position).project(camera);
+        lensingPass.uniforms.bh1Pos.value.set((projectedPosition.x + 1) / 2, (projectedPosition.y + 1) / 2);
+        projectedPosition.copy(blackHoleTwo.position).project(camera);
+        lensingPass.uniforms.bh2Pos.value.set((projectedPosition.x + 1) / 2, (projectedPosition.y + 1) / 2);
+        lensingPass.uniforms.mass1.value = firstMass * 0.016;
+        lensingPass.uniforms.mass2.value = secondMass * 0.016;
+      } else {
+        projectedPosition.copy(mergedBlackHole.position).project(camera);
+        lensingPass.uniforms.bh1Pos.value.set((projectedPosition.x + 1) / 2, (projectedPosition.y + 1) / 2);
+        lensingPass.uniforms.bh2Pos.value.set(-1, -1);
+        lensingPass.uniforms.mass1.value = totalMass * 0.022;
+        lensingPass.uniforms.mass2.value = 0;
+      }
+    }
+
+    function updateTelemetry(point, separation, collisionAmount, mergerAge, delta) {
+      telemetryTimer += delta;
+      if (telemetryTimer < 1 / 15) return;
+      telemetryTimer = 0;
+      hud.frequency.textContent = `${Math.round(playing ? point.frequency : 0)} Hz`;
+      if (mergerTriggered) {
+        hud.velocity.textContent = '0.000 c';
+        hud.separation.textContent = 'Merged';
+      } else {
+        hud.velocity.textContent = `${point.velocity.toFixed(3)} c`;
+        hud.separation.textContent = `${Math.floor(separation * 15)} km`;
+      }
+      if (contactStarted && !mergerTriggered && collisionAmount > 0.7) setCollisionState('Tidal contact', 'is-contact');
+      if (mergerTriggered && mergerAge > 1.95) setCollisionState('Ringdown', 'is-merged');
+    }
+
+    function captureStrain(strain, delta) {
+      waveSampleTimer += delta;
+      if (waveSampleTimer < WAVE_SAMPLE_INTERVAL) return;
+      waveSampleTimer = 0;
+      strainPoints.push({ time: elapsed, value: strain });
+      if (strainPoints.length > MAX_STRAIN_POINTS) strainPoints.shift();
+      waveDirty = true;
+    }
+
+    function updatePhysics(delta) {
+      const settings = updateSimulationSettings(delta);
+      const totalMass = settings.totalMass;
+      const ratio = settings.ratio;
+      const spin = settings.spin;
+      const firstMass = totalMass / (1 + ratio);
+      const secondMass = totalMass * ratio / (1 + ratio);
+      const observerSignal = signalStrength(settings);
+      const simulationDelta = delta * settings.tempo;
+      frameDelta = simulationDelta;
+      const firstScale = firstMass * 0.15;
+      const secondScale = secondMass * 0.15;
+      blackHoleOne.scale.setScalar(firstScale);
+      blackHoleTwo.scale.setScalar(secondScale);
+      mergedBlackHole.scale.setScalar(totalMass * 0.1425);
+
+      const contactDistance = totalMass * (0.37 + spin * 0.025);
+      const startDistance = (totalMass * 0.45 + 65) * settings.separationScale;
+      let separation = startDistance;
+      let activeAmplitude = 0;
+      let collisionAmount = 0;
+      let mergerAge = mergerTriggered ? Math.max(0, elapsed - MERGER_TIME) : 0;
+      let point = { frequency: 0, amplitude: 0, velocity: 0 };
+
+      if (playing) {
+        elapsed += simulationDelta;
+        point = currentDataPoint(totalMass, spin);
+        activeAmplitude = point.amplitude * observerSignal;
+        if (elapsed < CONTACT_START) {
+          const progress = elapsed / CONTACT_START;
+          const easedProgress = 1 - Math.pow(1 - progress, 2.65);
+          separation = THREE.MathUtils.lerp(startDistance, contactDistance, easedProgress);
+        } else if (elapsed < MERGER_TIME) {
+          if (!contactStarted) startContact();
+          const progress = (elapsed - CONTACT_START) / (MERGER_TIME - CONTACT_START);
+          collisionAmount = THREE.MathUtils.smoothstep(progress, 0, 1);
+          separation = contactDistance * (1 - collisionAmount * 0.16);
+        } else if (elapsed <= SIMULATION_END) {
+          if (!mergerTriggered) completeMerger(totalMass, ratio, spin);
+          mergerAge = elapsed - MERGER_TIME;
+          separation = 0;
+        } else {
+          playing = false;
+          gridNeedsRefresh = true;
+          hud.playButton.textContent = 'Reset and Replay';
+          if (gain && audioContext) gain.gain.setTargetAtTime(0, audioContext.currentTime, 0.03);
+        }
+
+        const volume = Math.min(0.8, activeAmplitude / 5 * 0.8);
+        if (audioContext && oscillator && gain) {
+          oscillator.frequency.setTargetAtTime(Math.max(0, point.frequency), audioContext.currentTime, 0.05);
+          gain.gain.setTargetAtTime(playing ? volume : 0, audioContext.currentTime, 0.05);
+        }
+        captureStrain(activeAmplitude * Math.sin(phase * 2), delta);
+      }
+
+      const radiusOne = separation * secondMass / totalMass;
+      const radiusTwo = separation * firstMass / totalMass;
+      const orbitalX = Math.cos(phase);
+      const orbitalZ = Math.sin(phase);
+      const orbitalTilt = THREE.MathUtils.degToRad(settings.tilt);
+      const orbitalY = orbitalZ * Math.sin(orbitalTilt);
+      const orbitalDepth = orbitalZ * Math.cos(orbitalTilt);
+      blackHoleOne.position.set(orbitalX * radiusOne, orbitalY * radiusOne, orbitalDepth * radiusOne);
+      blackHoleTwo.position.set(-orbitalX * radiusTwo, -orbitalY * radiusTwo, -orbitalDepth * radiusTwo);
+      blackHoleOne.userData.accretionRing.rotation.z -= delta * (4.5 + spin * 2.2 + collisionAmount * 8);
+      blackHoleTwo.userData.accretionRing.rotation.z -= delta * (4.9 + spin * 2.2 + collisionAmount * 8);
+      blackHoleOne.userData.outerRing.rotation.z += delta * (1.55 + spin * 0.55);
+      blackHoleTwo.userData.outerRing.rotation.z -= delta * (1.85 + spin * 0.55);
+      mergedBlackHole.userData.accretionRing.rotation.z -= delta * (1.8 + spin * 0.9);
+      mergedBlackHole.userData.outerRing.rotation.z += delta * (0.65 + spin * 0.35);
+      blackHoleOne.userData.glow.material.opacity = 0.52 + collisionAmount * 0.32;
+      blackHoleTwo.userData.glow.material.opacity = 0.52 + collisionAmount * 0.32;
+      mergedBlackHole.userData.glow.material.opacity = mergerTriggered ? 0.7 - Math.min(0.22, mergerAge * 0.1) : 0.5;
+
+      if (playing && !mergerTriggered) {
+        recordTrail(firstTrail, blackHoleOne.position, delta);
+        recordTrail(secondTrail, blackHoleTwo.position, delta);
+      }
+      updateCollisionVisuals(totalMass, collisionAmount, mergerAge, delta);
+      updateBlueGrid(totalMass, firstMass, secondMass, activeAmplitude, collisionAmount, mergerAge, delta);
+      updateLensing(firstMass, secondMass, totalMass);
+      if (playing) updateTelemetry(point, separation, collisionAmount, mergerAge, delta);
+    }
+
+    function drawWaveform(delta) {
+      if ($('wave-panel').classList.contains('is-collapsed') || document.body.classList.contains('focus-mode')) return;
+      waveTimer += delta;
+      if (!waveDirty || waveTimer < WAVE_INTERVAL) return;
+      waveTimer = 0;
+      waveDirty = false;
+      const width = ligoCanvas.clientWidth;
+      const height = ligoCanvas.clientHeight;
+      if (!width || !height) return;
+      const scale = Math.min(devicePixelRatio, 2);
+      if (ligoCanvas.width !== Math.round(width * scale) || ligoCanvas.height !== Math.round(height * scale)) {
+        ligoCanvas.width = Math.round(width * scale);
+        ligoCanvas.height = Math.round(height * scale);
+      }
+      ligoContext.setTransform(scale, 0, 0, scale, 0, 0);
+      ligoContext.clearRect(0, 0, width, height);
+      const middle = height / 2;
+      ligoContext.strokeStyle = 'rgba(194, 224, 255, 0.2)';
+      ligoContext.lineWidth = 1;
+      ligoContext.beginPath();
+      ligoContext.moveTo(0, middle);
+      ligoContext.lineTo(width, middle);
+      ligoContext.stroke();
+      if (strainPoints.length < 2) return;
+      ligoContext.strokeStyle = referenceMode ? '#ffb547' : '#42a3ff';
+      ligoContext.lineWidth = 2.4;
+      ligoContext.shadowColor = referenceMode ? 'rgba(255, 181, 71, 0.48)' : 'rgba(66, 163, 255, 0.6)';
+      ligoContext.shadowBlur = 7;
+      const strongestSignal = Math.max(4.5, ...strainPoints.map((point) => Math.abs(point.value)));
+      const amplitudeScale = height / (strongestSignal * 2.55);
+      ligoContext.beginPath();
+      for (let index = 0; index < strainPoints.length; index += 1) {
+        const point = strainPoints[index];
+        const x = Math.min(width, point.time / SIMULATION_END * width);
+        const y = middle - point.value * amplitudeScale;
+        if (index === 0) ligoContext.moveTo(x, y);
+        else ligoContext.lineTo(x, y);
+      }
+      ligoContext.stroke();
+      ligoContext.shadowBlur = 0;
+    }
+
+    $('play-btn').addEventListener('click', () => beginSimulation('sandbox'));
+    $('btn-data').addEventListener('click', () => beginSimulation('reference'));
+    personalSliders.forEach((slider) => {
+      slider.addEventListener('input', () => {
+        referenceMode = false;
+        hud.mode.style.display = 'none';
+        hud.source.textContent = 'Source: personalized sandbox math';
+        gridNeedsRefresh = true;
+        waveDirty = true;
+        updateSliderLabels();
+      });
+    });
+
+    function togglePanel(panel, button) {
+      const collapsed = panel.classList.toggle('is-collapsed');
+      button.setAttribute('aria-expanded', String(!collapsed));
+      button.textContent = collapsed ? 'Show' : 'Hide';
+    }
+
+    $('controls-toggle').addEventListener('click', () => togglePanel($('control-panel'), $('controls-toggle')));
+    $('telemetry-toggle').addEventListener('click', () => togglePanel($('telemetry-panel'), $('telemetry-toggle')));
+    $('wave-toggle').addEventListener('click', () => {
+      togglePanel($('wave-panel'), $('wave-toggle'));
+      refreshWaveform();
+    });
+
+    function setFocusMode(enabled) {
+      const focusMode = Boolean(enabled);
+      document.body.classList.toggle('focus-mode', focusMode);
+      $('view-toggle').setAttribute('aria-pressed', String(focusMode));
+      $('view-toggle').textContent = focusMode ? 'Exit focus' : 'Focus view';
+      if (!focusMode) refreshWaveform();
+    }
+
+    $('view-toggle').addEventListener('click', () => {
+      setFocusMode(!document.body.classList.contains('focus-mode'));
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && document.body.classList.contains('focus-mode')) setFocusMode(false);
+    });
+
+    const compactMedia = matchMedia('(max-width: 768px)');
+    if (compactMedia.matches) {
+      $('advanced-settings').open = false;
+    }
+    compactMedia.addEventListener('change', (event) => {
+      if (event.matches) $('advanced-settings').open = false;
+    });
+
+    const clock = new THREE.Clock();
+    updateSliderLabels();
+    resetSimulation();
+    updatePhysics(0);
+    let pageIsVisible = !document.hidden;
+
+    document.addEventListener('visibilitychange', () => {
+      pageIsVisible = !document.hidden;
+      if (pageIsVisible) {
+        clock.getDelta();
+        waveDirty = true;
+      }
+    });
+
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+      lensingPass.uniforms.resolution.value.set(innerWidth, innerHeight);
+      waveDirty = true;
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      if (!pageIsVisible) return;
+      orbit.update();
+      const delta = Math.min(clock.getDelta(), 0.1);
+      updateRenderQuality(delta);
+      updatePhysics(delta);
+      drawWaveform(delta);
+      composer.render();
+    }
+    animate();
+  </script>
+</body>
+</html>
